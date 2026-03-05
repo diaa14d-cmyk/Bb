@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار مانعات الحمل - الصيدلة السريرية</title>
+    <style>
+        :root {
+            --olive-green: #556B2F;
+            --light-beige: #F5F5DC;
+            --dark-text: #2c2c2c;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-beige);
+            color: var(--dark-text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #quiz-container {
+            background-color: var(--white);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+            border-top: 8px solid var(--olive-green);
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            color: var(--olive-green);
+            font-weight: bold;
+            font-size: 1.1rem;
+            border-bottom: 2px solid var(--light-beige);
+            padding-bottom: 10px;
+        }
+
+        h2 { color: var(--olive-green); margin-bottom: 20px; font-size: 1.4rem; }
+
+        .question-text {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            text-align: left;
+            direction: ltr;
+            line-height: 1.5;
+        }
+
+        .options-container {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option-btn {
+            background-color: var(--white);
+            border: 2px solid var(--olive-green);
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            text-align: left;
+            direction: ltr;
+        }
+
+        .option-btn:hover {
+            background-color: var(--olive-green);
+            color: white;
+        }
+
+        .correct { background-color: #d4edda !important; border-color: #28a745 !important; color: #155724 !important; }
+        .incorrect { background-color: #f8d7da !important; border-color: #dc3545 !important; color: #721c24 !important; }
+
+        #explanation {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-right: 5px solid #ffc107;
+            text-align: left;
+            direction: ltr;
+            font-size: 0.95rem;
+        }
+
+        #next-btn {
+            display: none;
+            background-color: var(--olive-green);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 15px;
+        }
+
+        .page-num { color: #777; font-style: italic; font-size: 0.8rem; display: block; margin-top: 5px; }
+
+        #result-screen { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div class="header-info">
+        <div>النتيجة: <span id="score">0</span> / 70</div>
+        <div>السؤال: <span id="current-idx">1</span> / 70</div>
+    </div>
+
+    <div id="question-content">
+        <div class="question-text" id="question">Loading...</div>
+        <div class="options-container" id="options"></div>
+        <div id="explanation"></div>
+        <button id="next-btn" onclick="loadNextQuestion()">السؤال التالي</button>
+    </div>
+
+    <div id="result-screen">
+        <h2 style="font-size: 2rem;">انتهى الاختبار!</h2>
+        <p style="font-size: 1.5rem;">درجتك النهائية: <span id="final-score"></span> من 70</p>
+        <button onclick="location.reload()" class="option-btn" style="text-align:center; width: 200px;">إعادة الاختبار</button>
+    </div>
+</div>
+
+<script>
+const quizData = [
+    { q: "What is the primary mechanism of contraception?", a: ["Prevention of pregnancy by inhibiting sperm reaching an ovum", "Increasing sperm count", "Inducing ovulation", "Shortening the luteal phase"], c: 0, e: "Contraception prevents pregnancy by inhibiting sperm from reaching an ovum or preventing implantation.", p: 3 },
+    { q: "What is the median length of the menstrual cycle?", a: ["21 days", "28 days", "35 days", "40 days"], c: 1, e: "The median menstrual cycle length is 28 days (range 21-40 days).", p: 4 },
+    { q: "Which day marks the beginning of the follicular phase?", a: ["Day 14", "Day 7", "Day 1", "Day 28"], c: 2, e: "Day 1 is the first day of menses and marks the beginning of the follicular phase.", p: 4 },
+    { q: "Ovulation usually occurs on which day of a 28-day cycle?", a: ["Day 1", "Day 7", "Day 14", "Day 21"], c: 2, e: "Ovulation usually occurs on day 14.", p: 4 },
+    { q: "Which hormone is secreted by the hypothalamus to stimulate the pituitary?", a: ["FSH", "LH", "GnRH", "Estradiol"], c: 2, e: "The hypothalamus secretes gonadotropin releasing hormone (GnRH).", p: 4 },
+    { q: "Which hormones are known as gonadotropins?", a: ["Estrogen and Progesterone", "FSH and LH", "GnRH and FSH", "Inhibin and Estradiol"], c: 1, e: "The anterior pituitary secretes the gonadotropins FSH and LH.", p: 4 },
+    { q: "During the follicular phase, which hormone level increases to recruit follicles?", a: ["Progesterone", "LH", "FSH", "HCG"], c: 2, e: "In the follicular phase, FSH levels increase and cause recruitment of follicles.", p: 5 },
+    { q: "On which days does one follicle usually become dominant?", a: ["Days 1-3", "Days 5-7", "Days 10-12", "Days 14-16"], c: 1, e: "Between days 5 and 7, one follicle becomes dominant.", p: 5 },
+    { q: "What provides negative feedback on the secretion of GnRH and FSH?", a: ["Progesterone", "Estradiol and inhibin", "LH surge", "Androgens"], c: 1, e: "The dominant follicle develops estradiol and inhibin, providing negative feedback.", p: 5 },
+    { q: "Which hormone thickens the endometrial lining and makes cervical mucus thin?", a: ["Progesterone", "FSH", "Estradiol", "Testosterone"], c: 2, e: "Estradiol thickens the endometrial lining and produces thin, watery cervical mucus.", p: 6 },
+    { q: "Which enzyme conversion does FSH regulate in the follicle?", a: ["Estrogen to Androgen", "Androgen to Estrogen", "Progesterone to Estrogen", "LH to FSH"], c: 1, e: "FSH regulates aromatase enzymes that induce conversion of androgens to estrogens.", p: 6 },
+    { q: "What stimulates the final stages of follicular maturation and ovulation?", a: ["FSH surge", "Mid-cycle LH surge", "Progesterone drop", "Estradiol drop"], c: 1, e: "The pituitary releases a mid-cycle LH surge that stimulates ovulation.", p: 7 },
+    { q: "How long after the LH peak does ovulation typically occur?", a: ["2-4 hours", "10-16 hours", "24-36 hours", "48-72 hours"], c: 1, e: "Ovulation occurs 10-16 hours after the LH peak.", p: 7 },
+    { q: "What is the most clinically useful predictor of approaching ovulation?", a: ["Basal body temperature", "LH surge", "FSH levels", "Progesterone levels"], c: 1, e: "The LH surge is the most clinically useful predictor of approaching ovulation.", p: 7 },
+    { q: "Conception is most successful when intercourse occurs during which period?", a: ["5 days after ovulation", "The day of menstruation", "2 days before ovulation to the day of ovulation", "Only the day after ovulation"], c: 2, e: "Conception is most successful from 2 days before to the day of ovulation.", p: 7 },
+    { q: "What does the remaining follicle become after ovulation?", a: ["Dominant follicle", "Corpus luteum", "Endometrium", "Ovum"], c: 1, e: "After ovulation, the remaining luteinized follicles become the corpus luteum.", p: 8 },
+    { q: "Which hormone prevents the regression of the corpus luteum if pregnancy occurs?", a: ["FSH", "LH", "HCG", "Estradiol"], c: 2, e: "Human chorionic gonadotropin (HCG) prevents regression of the corpus luteum.", p: 8 },
+    { q: "What causes menstruation to occur if pregnancy does not happen?", a: ["Increase in progesterone", "Decline in progesterone", "LH surge", "FSH peak"], c: 1, e: "If pregnancy does not occur, progesterone declines and menstruation occurs.", p: 8 },
+    { q: "What is a major non-contraceptive benefit of using condoms?", a: ["Weight loss", "Prevention of STIs", "Increased fertility", "Clearer skin"], c: 1, e: "Additional benefits include prevention of sexually transmitted infections (STIs).", p: 11 },
+    { q: "Which method involves avoiding intercourse during fertile days?", a: ["Spermicides", "Barrier methods", "Fertility Awareness-Based Methods", "IUD"], c: 2, e: "Fertility Awareness-Based Methods involve avoiding intercourse during fertile days.", p: 12 },
+    { q: "Diaphragms and cervical caps must be used with which substance?", a: ["Water-based lubricant", "Spermicide", "Antibiotic cream", "Petroleum jelly"], c: 1, e: "These are barrier methods and must be used with spermicide.", p: 12 },
+    { q: "What is the maximum time a diaphragm should be left in place to avoid TSS?", a: ["6 hours", "12 hours", "24 hours", "48 hours"], c: 2, e: "A diaphragm should not be left in place longer than 24 hours due to TSS risk.", p: 12 },
+    { q: "What is the maximum time a cervical cap can be left in place?", a: ["12 hours", "24 hours", "48 hours", "72 hours"], c: 2, e: "The cervical cap should not be left in place longer than 48 hours.", p: 12 },
+    { q: "Which type of condom is made from a material NOT impermeable to viruses?", a: ["Latex", "Synthetic", "Lamb intestine", "Internal condom"], c: 2, e: "Condoms made from lamb intestine do not protect against viruses.", p: 13 },
+    { q: "Why are condoms containing spermicides not recommended?", a: ["They are too expensive", "They may increase the risk of HIV infection", "They break easily", "They have a bad smell"], c: 1, e: "They may increase the risk of HIV infection and do not improve protection.", p: 13 },
+    { q: "Which condom covers the labia and cervix?", a: ["External condom", "Latex condom", "Internal (female) condom", "Lamb intestine condom"], c: 2, e: "Internal (female) condoms cover the labia and the cervix.", p: 13 },
+    { q: "What is the primary active ingredient in most spermicides?", a: ["Ethinyl estradiol", "Nonoxynol-9", "Progestin", "Latex"], c: 1, e: "Most spermicides contain nonoxynol-9.", p: 14 },
+    { q: "Using nonoxynol-9 more than twice daily may lead to what risk?", a: ["Pregnancy", "Increased HIV transmission", "Allergy to latex", "TSS"], c: 1, e: "Using nonoxynol-9 more than twice daily may increase HIV transmission.", p: 14 },
+    { q: "How long must a vaginal contraceptive sponge stay in place after intercourse?", a: ["1 hour", "At least 6 hours", "24 hours", "Should be removed immediately"], c: 1, e: "The sponge must be left in place for at least 6 hours before removal.", p: 14 },
+    { q: "What is the efficacy of oral contraceptives with perfect use?", a: ["75%", "90%", "93%", "More than 99%"], c: 3, e: "With perfect use, OC efficacy is more than 99%.", p: 15 },
+    { q: "What is the typical use failure rate for oral contraceptives?", a: ["1%", "3%", "7%", "15%"], c: 2, e: "With typical use, up to 7% experience unintended pregnancy.", p: 15 },
+    { q: "How do estrogens contribute to preventing ovulation in CHCs?", a: ["They increase FSH", "They suppress FSH release", "They thin the endometrium", "They decrease cervical mucus"], c: 1, e: "Estrogens suppress FSH release, contributing to blocking the LH surge.", p: 16 },
+    { q: "What is the most common synthetic estrogen used in CHCs?", a: ["Estradiol valerate", "Estetrol (E4)", "Ethinyl estradiol (EE)", "Mestranol"], c: 2, e: "Ethinyl estradiol (EE) is the most common synthetic estrogen.", p: 16 },
+    { q: "Which hormonal component thickens cervical mucus and induces endometrial atrophy?", a: ["Estrogen", "Progestin", "FSH", "GnRH"], c: 1, e: "Progestins thicken cervical mucus and induce endometrial atrophy.", p: 17 },
+    { q: "What is a 'Monophasic' CHC?", a: ["Variable hormones for 21 days", "Constant hormone amounts for 21 days", "Progestin only for 28 days", "Hormones for 84 days"], c: 1, e: "Monophasic CHCs contain a constant amount of estrogen and progestin for 21 days.", p: 18 },
+    { q: "What is the main drawback of 'minipills' (Progestin Only)?", a: ["Higher risk of blood clots", "Irregular and unpredictable bleeding", "Causes weight gain", "Highly effective"], c: 1, e: "Minipills are associated with irregular and unpredictable menstrual bleeding.", p: 19 },
+    { q: "Minipills are associated with a higher risk of which condition compared to CHCs?", a: ["Ovarian cancer", "Ectopic pregnancy", "Iron deficiency", "Breast disease"], c: 1, e: "Minipills are associated with more ectopic pregnancies than other hormonal contraceptives.", p: 19 },
+    { q: "In 'Sunday start' initiation, when does the user start the pill?", a: ["The first day of menses", "The first Sunday after the onset of menses", "Any day they visit the clinic", "The last day of menses"], c: 1, e: "Sunday start means initiation on the first Sunday after the onset of menses.", p: 20 },
+    { q: "Which initiation method is done regardless of the timing of the menstrual cycle?", a: ["First day start", "Sunday start", "Quick start", "Late start"], c: 2, e: "The quick start is initiated on the day of the visit regardless of cycle timing.", p: 20 },
+    { q: "CHCs reduce the risk of which type of cancer?", a: ["Lung cancer", "Ovarian and endometrial cancer", "Skin cancer", "Cervical cancer"], c: 1, e: "CHCs reduce the risk of ovarian and endometrial cancer.", p: 22 },
+    { q: "The mnemonic 'ACHES' is used to identify warning signs. What does 'A' stand for?", a: ["Anemia", "Abdominal pain", "Acne", "Aches in joints"], c: 1, e: "A stands for Abdominal pain.", p: 23 },
+    { q: "The mnemonic 'ACHES' is used to identify warning signs. What does 'S' stand for?", a: ["Skin rash", "Severe leg pain", "Stomach ache", "Sleepiness"], c: 1, e: "S stands for Severe leg pain.", p: 23 },
+    { q: "How many cycles does it usually take for early side effects like nausea to improve?", a: ["1st cycle", "By the 3rd cycle", "After 1 year", "They never improve"], c: 1, e: "Adverse effects occurring in the first cycle usually improve by the third cycle.", p: 23 },
+    { q: "Which hormone is responsible for stabilizing the endometrial lining?", a: ["Progestin", "Estrogen", "LH", "FSH"], c: 1, e: "Estrogens stabilize the endometrial lining and provide cycle control.", p: 16 },
+    { q: "Biphasic and triphasic pills contain variable amounts of hormones for how many days?", a: ["7 days", "14 days", "21 days", "28 days"], c: 2, e: "Biphasic and triphasic pills contain variable amounts for 21 days.", p: 18 },
+    { q: "Extended-cycle regimens result in how many menstrual cycles per year?", a: ["1 cycle", "4 cycles", "12 cycles", "0 cycles"], c: 1, e: "Extended-cycle regimens result in four menstrual cycles per year.", p: 18 },
+    { q: "Which method is a long-acting injection?", a: ["OC", "Vaginal ring", "Hormonal injection", "Spermicide"], c: 2, e: "Hormonal contraceptives may be administered as long acting injections.", p: 15 },
+    { q: "Which phase of the menstrual cycle lasts from ovulation to the next cycle?", a: ["Follicular phase", "Luteal phase", "Menstrual phase", "Proliferative phase"], c: 1, e: "Ovulation is followed by the luteal phase.", p: 4 },
+    { q: "What is the effect of Progestin on sperm transport?", a: ["Speeds it up", "Delays it", "Increases sperm count", "Has no effect"], c: 1, e: "Progestins delay sperm transport.", p: 17 },
+    { q: "Which of these is NOT a non-pharmacologic barrier method?", a: ["Diaphragm", "Minipill", "Cervical cap", "Condom"], c: 1, e: "Minipill is a pharmacologic hormonal method.", p: 19 },
+    // Adding more questions to reach 70...
+    { q: "Does a vaginal contraceptive sponge protect against HIV?", a: ["Yes", "No", "Only if used with a condom", "Sometimes"], c: 1, e: "Spermicides and sponges do not protect against STIs like HIV.", p: 14 },
+    { q: "What is 'Spinnbarkeit'?", a: ["Low elasticity mucus", "High elasticity cervical mucus", "A type of IUD", "A menstrual phase"], c: 1, e: "High elasticity cervical mucus is called spinnbarkeit.", p: 10 },
+    { q: "During which phase is basal body temperature typically lower?", a: ["Follicular phase", "Luteal phase", "Ovulation", "Secretory phase"], c: 0, e: "Basal body temperature is lower in the follicular phase and rises after ovulation.", p: 10 },
+    { q: "What happens to the endometrium during the 'Secretory Phase'?", a: ["It sheds", "It thins", "It grows/thickens (Implantation prep)", "It stops growing"], c: 2, e: "The secretory phase is associated with endometrial growth and preparation for implantation.", p: 10 },
+    { q: "Average blood loss during menstruation is?", a: ["5-10 cc", "30-40 cc", "100-150 cc", "Over 200 cc"], c: 1, e: "30-40 cc blood is typically lost during menses.", p: 10 },
+    { q: "Which hormone is the primary component of the corpus luteum production?", a: ["Only FSH", "Only LH", "Estrogen, Progesterone, and Androgen", "GnRH"], c: 2, e: "The corpus luteum synthesizes androgen, estrogen, and progesterone.", p: 8 },
+    { q: "What is the primary goal of treatment in contraception?", a: ["Treating acne", "Regulating menses", "Prevention of pregnancy", "Preventing STIs"], c: 2, e: "The goal of treatment is the prevention of pregnancy.", p: 11 },
+    { q: "Fertility Awareness-Based Methods have what kind of failure rate?", a: ["Very low", "Zero", "Relatively high", "Same as OCs"], c: 2, e: "They have a relatively high failure (pregnancy) rate.", p: 12 },
+    { q: "A diaphragm must stay in place for at least how many hours after intercourse?", a: ["1 hour", "2 hours", "6 hours", "24 hours"], c: 2, e: "It must stay in place for at least 6 hours after intercourse.", p: 12 },
+    { q: "Which condition is a risk if a cervical cap is left in longer than 48 hours?", a: ["Anemia", "Toxic Shock Syndrome (TSS)", "Ovarian cyst", "HIV"], c: 1, e: "Leaving it longer than 48 hours increases TSS risk.", p: 12 },
+    { q: "Latex condoms are impermeable to?", a: ["Only water", "Viruses", "Large bacteria only", "None of the above"], c: 1, e: "Latex is impermeable to viruses.", p: 13 },
+    { q: "Is a female condom more or less effective than a male condom?", a: ["More effective", "Less effective (Higher pregnancy rate)", "Equally effective", "Not effective at all"], c: 1, e: "The internal (female) condom has a higher pregnancy rate than external condoms.", p: 13 },
+    { q: "Nonoxynol-9 damages what part of the sperm?", a: ["Tail only", "Cell membrane", "DNA", "Mitochondria"], c: 1, e: "It damages sperm cell membranes.", p: 14 },
+    { q: "Which of these is a 'Long acting' hormonal method?", a: ["Monophasic pill", "Quick start", "Subdermal implant", "Spermicide"], c: 2, e: "Subdermal implants are long-acting hormonal contraceptives.", p: 15 },
+    { q: "Combined Hormonal Contraceptives work primarily when?", a: ["After fertilization", "Before fertilization", "During implantation", "After the first trimester"], c: 1, e: "CHCs work primarily before fertilization.", p: 16 },
+    { q: "Which phase of the pill cycle follows the 21 days of active hormones?", a: ["Another 21 days", "7 day placebo phase", "Ovulation phase", "Menstrual phase only"], c: 1, e: "They are followed by a 7 day placebo phase.", p: 18 },
+    { q: "Minipills must be taken at what time?", a: ["Any time of day", "Only in the morning", "Approximately the same time every day", "Only before intercourse"], c: 2, e: "They must be taken every day at approximately the same time.", p: 19 },
+    { q: "What is the 'First day start' method?", a: ["Start on Sunday", "Start on first day of menstrual bleeding", "Start on day 14", "Start on first day of marriage"], c: 1, e: "OC is initiated on the first day of menstrual bleeding.", p: 20 },
+    { q: "Which is a benefit of CHC regarding blood?", a: ["Increases bleeding", "Decreased iron deficiency anemia", "Causes clots in everyone", "Increases menstrual cramps"], c: 1, e: "CHCs decrease menstrual blood loss and iron deficiency anemia.", p: 22 },
+    { q: "What does 'E' stand for in ACHES?", a: ["Ear pain", "Eye problems", "Endometrial thinning", "Ectopic pregnancy"], c: 1, e: "E stands for Eye problems.", p: 23 }
+];
+
+let shuffledQuestions = [];
+let currentQuestionIndex = 0;
+let score = 0;
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+function startQuiz() {
+    shuffledQuestions = [...quizData];
+    shuffleArray(shuffledQuestions);
+    showQuestion();
+}
+
+function showQuestion() {
+    const q = shuffledQuestions[currentQuestionIndex];
+    document.getElementById("current-idx").innerText = currentQuestionIndex + 1;
+    document.getElementById("question").innerText = q.q;
+    const optionsDiv = document.getElementById("options");
+    optionsDiv.innerHTML = "";
+    document.getElementById("explanation").style.display = "none";
+    document.getElementById("next-btn").style.display = "none";
+
+    q.a.forEach((option, index) => {
+        const btn = document.createElement("button");
+        btn.innerText = option;
+        btn.classList.add("option-btn");
+        btn.onclick = () => checkAnswer(index, q.c, q.e, q.p);
+        optionsDiv.appendChild(btn);
+    });
+}
+
+function checkAnswer(selected, correct, explanation, page) {
+    const buttons = document.getElementsByClassName("option-btn");
+    for (let btn of buttons) btn.disabled = true;
+
+    if (selected === correct) {
+        buttons[selected].classList.add("correct");
+        score++;
+        document.getElementById("score").innerText = score;
+    } else {
+        buttons[selected].classList.add("incorrect");
+        buttons[correct].classList.add("correct");
+        const expDiv = document.getElementById("explanation");
+        expDiv.innerHTML = `<strong>خطأ! التوضيح:</strong> ${explanation} <span class="page-num">(Source: Page ${page})</span>`;
+        expDiv.style.display = "block";
+    }
+    document.getElementById("next-btn").style.display = "inline-block";
+}
+
+function loadNextQuestion() {
+    currentQuestionIndex++;
+    if (currentQuestionIndex < 70) {
+        showQuestion();
+    } else {
+        showResult();
+    }
+}
+
+function showResult() {
+    document.getElementById("question-content").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+    document.getElementById("final-score").innerText = score;
+}
+
+startQuiz();
+</script>
+
+</body>
+</html>
